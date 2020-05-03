@@ -1,4 +1,4 @@
-//! Process window events
+//! Process window events.
 use std::borrow::Cow;
 use std::cmp::max;
 use std::env;
@@ -89,7 +89,7 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
     fn scroll(&mut self, scroll: Scroll) {
         self.terminal.scroll_display(scroll);
 
-        // Update selection
+        // Update selection.
         if self.terminal.mode().contains(TermMode::VI)
             && self.terminal.selection().as_ref().map(|s| s.is_empty()) != Some(true)
         {
@@ -123,7 +123,7 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
     fn update_selection(&mut self, point: Point, side: Side) {
         let point = self.terminal.visible_to_buffer(point);
 
-        // Update selection if one exists
+        // Update selection if one exists.
         let vi_mode = self.terminal.mode().contains(TermMode::VI);
         if let Some(selection) = self.terminal.selection_mut() {
             selection.update(point, side);
@@ -304,7 +304,7 @@ pub enum ClickState {
     TripleClick,
 }
 
-/// State of the mouse
+/// State of the mouse.
 #[derive(Debug)]
 pub struct Mouse {
     pub x: usize,
@@ -344,7 +344,7 @@ impl Default for Mouse {
     }
 }
 
-/// The event processor
+/// The event processor.
 ///
 /// Stores some state from received events and dispatches actions when they are
 /// triggered.
@@ -361,10 +361,9 @@ pub struct Processor<N> {
 }
 
 impl<N: Notify + OnResize> Processor<N> {
-    /// Create a new event processor
+    /// Create a new event processor.
     ///
-    /// Takes a writer which is expected to be hooked up to the write end of a
-    /// pty.
+    /// Takes a writer which is expected to be hooked up to the write end of a pty.
     pub fn new(
         notifier: N,
         message_buffer: MessageBuffer,
@@ -396,18 +395,18 @@ impl<N: Notify + OnResize> Processor<N> {
                 info!("glutin event: {:?}", event);
             }
 
-            // Ignore all events we do not care about
+            // Ignore all events we do not care about.
             if Self::skip_event(&event) {
                 return;
             }
 
             match event {
-                // Check for shutdown
+                // Check for shutdown.
                 GlutinEvent::UserEvent(Event::Exit) => {
                     *control_flow = ControlFlow::Exit;
                     return;
                 },
-                // Process events
+                // Process events.
                 GlutinEvent::RedrawEventsCleared => {
                     *control_flow = ControlFlow::Wait;
 
@@ -415,7 +414,7 @@ impl<N: Notify + OnResize> Processor<N> {
                         return;
                     }
                 },
-                // Remap DPR change event to remove lifetime
+                // Remap DPR change event to remove lifetime.
                 GlutinEvent::WindowEvent {
                     event: WindowEvent::ScaleFactorChanged { scale_factor, new_inner_size },
                     ..
@@ -461,7 +460,7 @@ impl<N: Notify + OnResize> Processor<N> {
                 Processor::handle_event(event, &mut processor);
             }
 
-            // Process DisplayUpdate events
+            // Process DisplayUpdate events.
             if !display_update_pending.is_empty() {
                 self.display.handle_update(
                     &mut terminal,
@@ -475,12 +474,12 @@ impl<N: Notify + OnResize> Processor<N> {
             if terminal.dirty {
                 terminal.dirty = false;
 
-                // Request immediate re-draw if visual bell animation is not finished yet
+                // Request immediate re-draw if visual bell animation is not finished yet.
                 if !terminal.visual_bell.completed() {
                     event_queue.push(GlutinEvent::UserEvent(Event::Wakeup));
                 }
 
-                // Redraw screen
+                // Redraw screen.
                 self.display.draw(
                     terminal,
                     &self.message_buffer,
@@ -491,11 +490,11 @@ impl<N: Notify + OnResize> Processor<N> {
             }
         });
 
-        // Write ref tests to disk
+        // Write ref tests to disk.
         self.write_ref_test_results(&terminal.lock());
     }
 
-    /// Handle events from glutin
+    /// Handle events from glutin.
     ///
     /// Doesn't take self mutably due to borrow checking.
     fn handle_event<T>(
@@ -509,11 +508,11 @@ impl<N: Notify + OnResize> Processor<N> {
                 Event::DPRChanged(scale_factor, (width, height)) => {
                     let display_update_pending = &mut processor.ctx.display_update_pending;
 
-                    // Push current font to update its DPR
+                    // Push current font to update its DPR.
                     display_update_pending.font =
                         Some(processor.ctx.config.font.clone().with_size(*processor.ctx.font_size));
 
-                    // Resize to event's dimensions, since no resize event is emitted on Wayland
+                    // Resize to event's dimensions, since no resize event is emitted on Wayland.
                     display_update_pending.dimensions = Some(PhysicalSize::new(width, height));
 
                     processor.ctx.size_info.dpr = scale_factor;
@@ -555,7 +554,7 @@ impl<N: Notify + OnResize> Processor<N> {
                     WindowEvent::KeyboardInput { input, is_synthetic: false, .. } => {
                         processor.key_input(input);
                         if input.state == ElementState::Pressed {
-                            // Hide cursor while typing
+                            // Hide cursor while typing.
                             if processor.ctx.config.ui_config.mouse.hide_when_typing {
                                 processor.ctx.window.set_mouse_visible(false);
                             }
@@ -630,7 +629,7 @@ impl<N: Notify + OnResize> Processor<N> {
         }
     }
 
-    /// Check if an event is irrelevant and can be skipped
+    /// Check if an event is irrelevant and can be skipped.
     fn skip_event(event: &GlutinEvent<Event>) -> bool {
         match event {
             GlutinEvent::WindowEvent { event, .. } => match event {
@@ -672,7 +671,7 @@ impl<N: Notify + OnResize> Processor<N> {
 
         processor.ctx.terminal.update_config(&config);
 
-        // Reload cursor if we've changed its thickness
+        // Reload cursor if we've changed its thickness.
         if (processor.ctx.config.cursor.thickness() - config.cursor.thickness()).abs()
             > std::f64::EPSILON
         {
@@ -680,7 +679,7 @@ impl<N: Notify + OnResize> Processor<N> {
         }
 
         if processor.ctx.config.font != config.font {
-            // Do not update font size if it has been changed at runtime
+            // Do not update font size if it has been changed at runtime.
             if *processor.ctx.font_size == processor.ctx.config.font.size {
                 *processor.ctx.font_size = config.font.size;
             }
@@ -701,13 +700,13 @@ impl<N: Notify + OnResize> Processor<N> {
         processor.ctx.terminal.dirty = true;
     }
 
-    // Write the ref test results to the disk
+    // Write the ref test results to the disk.
     pub fn write_ref_test_results<T>(&self, terminal: &Term<T>) {
         if !self.config.debug.ref_test {
             return;
         }
 
-        // dump grid state
+        // dump grid state.
         let mut grid = terminal.grid().clone();
         grid.initialize_all(&Cell::default());
         grid.truncate();
